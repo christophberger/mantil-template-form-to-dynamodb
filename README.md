@@ -51,9 +51,15 @@ Now test the API by calling
 mantil invoke form/list
 ```
 
-This call lists all rows in the database table. Initially, there are none, and so the result is empty.
+This call lists all rows in the database table. Initially, there are none, and so the result is empty. You'll see some log output that shows that everything works fine.
 
-To fill the table with data, we want to use a Google form.
+```
+$ mantil invoke form/list
+λ github.com/mantil-io/go-mantil-template/api/form/form.go:81: List called
+λ github.com/mantil-io/go-mantil-template/api/form/form.go:88: 0 []
+```
+
+To fill the table with data, we will use a Google form.
 
 
 ## Deploy a Google Form
@@ -66,50 +72,119 @@ First, create a new form in Google from the "Party Invite" template.
 - Log in to Google if not logged in already
 - For this example, select the predefined template named "Party Invite" and save a copy to your Google Drive. 
 
-![Party Invite](images/google-forms-select-party-invite.png)
+  ![Party Invite](images/google-forms-select-party-invite.png)
 
 ### Add an App Script to trigger a webhook call
 
 Standard Google forms cannot call a webhook on form submit. You might find a plugin on the Forms Marketplace, but here we want to look into setting up a script for that purpose.
 
 - On the Form design page, click the three-dots menu and select Script editor.
-- In the editor window, replace the code with the following script.
 
-```js
-var POST_URL = "https://CHANGEME.execute-api.REGION.amazonaws.com";
-function onSubmit(e) {
-    var form = FormApp.getActiveForm();
-    var allResponses = form.getResponses();
-    var latestResponse = allResponses[allResponses.length - 1];
-    var response = latestResponse.getItemResponses();
-    var payload = {};
-    for (var i = 0; i < response.length; i++) {
-        var question = response[i].getItem().getTitle();
-        var answer = response[i].getResponse();
-        payload[question] = answer;
-    }
+  ![script editor menu](images/google-forms-menu-script-editor.png)
 
-    console.log(JSON.stringify(payload))
+  A new script project opens.
+
+  ![script project](images/google-forms-new-script.png)
+
+- Replace the default code with the following script.
+
+  ```js
+  var POST_URL = "https://CHANGEME.execute-api.REGION.amazonaws.com";
+  function onSubmit(e) {
+  	var form = FormApp.getActiveForm();
+  	var allResponses = form.getResponses();
+  	var latestResponse = allResponses[allResponses.length - 1];
+  	var response = latestResponse.getItemResponses();
+  	var payload = {};
+  	for (var i = 0; i < response.length; i++) {
+  		var question = response[i].getItem().getTitle();
+  		var answer = response[i].getResponse();
+  		payload[question] = answer;
+  	}
   
-    var options = {
-        "method": "post",
-        "contentType": "application/json",
-        "payload": JSON.stringify(payload)
-    };
-UrlFetchApp.fetch(POST_URL + "/form/save", options);
-};
-```
+  	console.log(JSON.stringify(payload))
+  
+  	var options = {
+  		"method": "post",
+  		"contentType": "application/json",
+  		"payload": JSON.stringify(payload)
+  	};
+  UrlFetchApp.fetch(POST_URL + "/form/save", options);
+  };
+  ```
 
-In your shell, call
+- In your shell, call
 
-```
-mantil env --url
-```
+  ```
+  mantil env --url
+  ```
 
-and replace the POST_URL value in the script with the URL from your Mantil environment.
+  and replace the POST_URL value in the script with the URL from your Mantil environment.
+  
+  You can paste the URL to the script as it is. The script adds the final endpoint `form/save` automatically.
+  
+  Note: if you destroy the current stage and create it again, the URL will change, and you need to adjust the URL in the script accordingly. Same applies to switching to a different stage. 
+  
+- You can give the project a suitable title, like, e.g., Mantil Webhook.
+  
+  ![webhook script](images/google-forms-mantil-webhook-script.png)
+  
 
-Note: if you destroy the current stage and create it again, the URL will change, and you need to adjust the URL in the script accordingly. 
+### Add a trigger
 
+- Now switch from the script editor to the trigger page (click the alarm clock symbol on the left side bar) and create a new trigger.
+
+  ![add trigger](images/google-forms-script-triggers.png)
+
+- In the Edit Trigger form, select Event Type = On Form Submit and save the trigger.
+
+  Note: Google Forms might ask you at this point to approve the script, if you trust the developer (that is, yourself). 
+
+  ![on form submit](images/google-forms-script-add-trigger.png)
+
+  This setup causes the form to send a Webhook to the Lambda function endpoint `/forms/save` every time someone submits the form.
+
+  ![trigger created](images/google-forms-script-trigger-created.png)
+
+
+## Test the Lambda function
+
+Now it is time for a first test.
+
+- On the form designer page, click the Preview icon.
+
+  ![preview icon](images/google-forms-party-preview-icon.png)
+
+- In the form preview, fill out and submit the form one or two times.
+
+  
+
+- Then call
+
+  ```
+  mantil invoke form/list
+  ```
+
+  and see if the data appears in the output. You should see the forms that you submitted previously. They have been stored to a DynamoDB table that `form/list` retrieves them from.
+
+  ```
+  200 OK
+  [
+     {
+        "What is your name?": "Mantil",
+        "Can you attend?": "Yes,  I'll be there",
+        "How many of you are attending?": "20",
+        "What will you be bringing?": [
+           "Drinks",
+           "Sides/Appetizers"
+        ],
+        "Do you have any allergies or dietary restrictions?": "",
+        "What is your email address?": "mantil@mantilparty.com"
+     }
+  ]
+  ```
+
+And that's all! Now you can save the RSVP's of all your party guests right in DynamoDB.
 
 ## Modification
 
@@ -145,9 +220,15 @@ To uninstall Mantil from your AWS account completely, run
 mantil aws uninstall
 ```
 
+(Remember to pass the credentials and the region to this command, as you did with the `install` command - either through flags or env variables, or from the AWS config.)
+
 
 ## Final thoughts
 
 With this template you learned how to use Mantil to create a simple AWS Lambda application that saves a Google form to a DynamoDB table. Check out our [documentation](https://github.com/mantil-io/mantil#documentation) to find more interesting templates. 
 
 If you have any questions or comments on this concrete template or would just like to share your view on Mantil contact us at [support@mantil.com](mailto:support@mantil.com) or create an issue.
+
+___
+
+*The Google Forms script was taken over from [Sending a Webhook for each Google Forms Submission | by Eyal Gershon | Medium](https://medium.com/@eyalgershon/sending-a-webhook-for-each-google-forms-submission-a0e73f72b397), with thanks to the author.*
