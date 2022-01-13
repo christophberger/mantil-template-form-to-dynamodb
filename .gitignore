@@ -1,3 +1,2 @@
 config/state.yml
-mantil-template-form-to-dynamodb.code-workspace
-BUILD_FROM_SCRATCH.md
+build/*
