@@ -157,8 +157,6 @@ Now it is time for a first test.
 
 - In the form preview, fill out and submit the form one or two times.
 
-  
-
 - Then call
 
   ```
@@ -185,6 +183,39 @@ Now it is time for a first test.
   ```
 
 And that's all! Now you can save the RSVP's of all your party guests right in DynamoDB.
+
+
+
+## Bonus: stage-specific behavior
+
+The code reads the table name from the environment. Mantil provides an `environment.yml` file that allows setting stage-specific variables.
+
+For this demo, the table name is set at stage level:
+
+```yml
+project:
+  stages:
+    - name: development
+      env:
+        TABLE_NAME: MantilPartyDev
+    - name: production
+      env:
+        TABLE_NAME: MantilParty
+```
+
+Look into your Amazon account and inspect the DynamoDB tables. After having deployed to the development stage as described above, you should see a table whose name contains "MantilPartyDev".  
+
+If you now create a new stage named "production" and invoke the Lambda function there...
+
+```
+mantil stage new production
+mantil stage use production
+mantil invoke form/list
+```
+
+...then you can see a new table in DynamoDB whose name contains "MantilParty" without the "Dev". 
+
+![dynamodb tables](images/dynamodb-tables.png)
 
 ## Modification
 

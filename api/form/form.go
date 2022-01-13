@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -12,7 +13,6 @@ import (
 )
 
 const (
-	TableName    = "MantilParty"
 	TableKey     = "email"
 	TableSortKey = "name"
 )
@@ -25,17 +25,22 @@ type Form struct {
 	Restrictions      string   `json:"Do you have any allergies or dietary restrictions?"`
 	Email             string   `json:"What is your email address?"`
 	table             *dynamodb.Client
+	tableName         string
 	tableResourceName *string
 }
 
 func New() *Form {
-	table, err := mantil.DynamodbTable(TableName, TableKey, TableSortKey)
+	tableName := os.Getenv("TABLE_NAME")
+	if tableName == "" {
+		tableName = "MantilPartyTable"
+	}
+	table, err := mantil.DynamodbTable(tableName, TableKey, TableSortKey)
 	if err != nil {
 		log.Fatalf("Cannot create table: %s", err)
 	}
 	return &Form{
 		table:             table,
-		tableResourceName: aws.String(mantil.Resource(TableName).Name),
+		tableResourceName: aws.String(mantil.Resource(tableName).Name),
 	}
 }
 

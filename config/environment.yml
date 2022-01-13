@@ -19,7 +19,7 @@
 #     KEY: project
 #     KEY2: project
 #     KEY3: project
-#   stages: 
+#   stages:
 #     - name: dev
 #       memory_size: 256
 #       timeout: 60
@@ -33,3 +33,11 @@
 #         private: true
 #         env:
 #           KEY3: function
+project:
+  stages:
+    - name: development
+      env:
+        TABLE_NAME: MantilPartyDev
+    - name: production
+      env:
+        TABLE_NAME: MantilParty
