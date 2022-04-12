@@ -22,7 +22,7 @@ To deploy this application you will need:
 To locally create a new project from this template run:
 
 ```
-mantil new app --from https://github.com/mantil-io/template-form-to-dynamodb
+mantil new app --from https://github.com/christophberger/mantil-template-form-to-dynamodb
 cd app
 ```
 
